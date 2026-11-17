@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Streaming CH">
+<meta name="theme-color" content="#1f0a10">
+<title>Streaming Schweiz</title>
+<style>
+  :root {
+    --bg: #1f0a10;
+    --panel: #2c111a;
+    --panel-2: #3a1722;
+    --line: #52222f;
+    --text: #f8edf0;
+    --muted: #c7a2ad;
+    --accent: #a01c35;        /* Bordeauxrot */
+    --accent-hi: #c8304d;
+    --accent-soft: #4f1424;
+    --good: #3ecf8e;
+    --mid: #f5b84a;
+    --bad: #ef5d5d;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { background: radial-gradient(1200px 500px at 50% -150px, #4a1222 0%, transparent 70%) no-repeat, var(--bg); }
+  html, body { margin: 0; background-color: var(--bg); color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  a { color: inherit; }
+
+  header { position: sticky; top: 0; z-index: 20; background: rgba(31,10,16,.92);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
+    padding-top: env(safe-area-inset-top); }
+  .bar { max-width: 1400px; margin: 0 auto; padding: 14px 20px 10px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { width: 34px; height: 34px; border-radius: 8px; background: var(--accent); position: relative; flex: none; cursor: pointer; border: 0; }
+  .logo::before, .logo::after { content: ""; position: absolute; background: #fff; left: 50%; top: 50%; transform: translate(-50%,-50%); }
+  .logo::before { width: 20px; height: 6px; } .logo::after { width: 6px; height: 20px; }
+  .brand h1 { margin: 0; font-size: 21px; letter-spacing: -.02em; }
+  .brand .sub { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+  .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px;
+    cursor: pointer; font-size: 13px; display: inline-flex; gap: 6px; align-items: center; user-select: none; }
+  .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button { background: var(--panel); border: 0; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .seg button.active { background: var(--text); color: var(--bg); }
+  .icon-btn { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .icon-btn:hover, .chip:hover { border-color: #8a3a4d; }
+  select.icon-btn { appearance: none; -webkit-appearance: none; padding-right: 12px; }
+  input.search { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; width: 170px; font-size: 13px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+
+  /* gewählte Anbieter in der Kopfzeile */
+  .provbar { max-width: 1400px; margin: 0 auto; padding: 0 20px 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .pchip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 6px 4px 11px;
+    font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+  .pchip button { border: 0; background: var(--panel-2); color: var(--muted); width: 20px; height: 20px; border-radius: 50%;
+    cursor: pointer; font-size: 12px; line-height: 1; display: grid; place-items: center; padding: 0; }
+  .pchip button:hover { background: var(--accent); color: #fff; }
+  .addchip { border: 1px dashed #8a3a4d; background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; color: #f2c4cf; }
+  .addchip:hover { border-color: var(--accent-hi); background: var(--accent-soft); }
+
+  nav.cats { max-width: 1400px; margin: 0 auto; padding: 0 20px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  nav.cats:empty { display: none; }
+  nav.cats::-webkit-scrollbar { display: none; }
+  nav.cats .chip { white-space: nowrap; text-decoration: none; }
+  nav.cats .chip b { color: var(--muted); font-weight: 500; }
+  nav.cats .chip.active b { color: var(--bg); }
+  nav.cats .chip.prio { border-color: #a03349; }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 8px 20px 60px; }
+  main:has(section.cat)::after { content: ""; display: block; height: 60vh; }
+  section.cat { margin-top: 28px; }
+  section.cat h2 { font-size: 20px; margin: 0 0 12px; display: flex; align-items: baseline; gap: 10px; }
+  section.cat h2 small { color: var(--muted); font-weight: 400; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+
+  /* ---------- Anbieter-Auswahl ---------- */
+  .picker h2 { font-size: 20px; margin: 26px 0 4px; }
+  .picker > p { color: var(--muted); margin: 0 0 16px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .tile { position: relative; display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 40px 14px 14px; cursor: pointer; text-align: left; transition: border-color .15s, background .15s; }
+  .tile:hover { border-color: #8a3a4d; }
+  .tile::after { content: ""; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;
+    border-radius: 6px; border: 2px solid #8a3a4d; }
+  .tile.on { border-color: var(--accent-hi); background: var(--accent-soft); }
+  .tile.on::after { content: "✓"; background: var(--accent-hi); border-color: var(--accent-hi); color: #fff;
+    font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+  .tile .mark { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font-weight: 800;
+    font-size: 15px; color: #fff; letter-spacing: -.02em; flex: none; }
+  .tile b { display: block; font-size: 15px; }
+  .tile span.cnt { font-size: 13px; color: var(--muted); }
+  .tile span.cnt.has { color: var(--good); }
+  .pickbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+  .pickbar .grow { flex: 1; }
+
+  /* ---------- Karten ---------- */
+  .card { display: flex; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px; cursor: pointer; transition: border-color .15s, transform .15s; min-width: 0; }
+  .card:hover { border-color: #8a3a4d; transform: translateY(-1px); }
+  .poster { flex: 0 0 104px; height: 156px; border-radius: 8px; overflow: hidden; background: var(--panel-2); }
+  .poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .info { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .info h3 { margin: 0; font-size: 16px; line-height: 1.25; }
+  .meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .badge { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+  .badge.new { background: var(--accent-soft); border-color: #a03349; color: #ff9db0; }
+  .plat { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; color: #fff; }
+  .abstract { font-size: 13.5px; color: #e3cdd3; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+  .ratings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .score { font-size: 12px; font-weight: 700; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,.75); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+  .score.g { color: var(--good); } .score.m { color: var(--mid); } .score.b { color: var(--bad); } .score.n { color: var(--muted); font-weight: 500; }
+  .score.imdb { background: #f5c518; color: #000; }
+  .score.rt { background: #3a1410; color: #ff8a70; }
+
+  .status { text-align: center; color: var(--muted); padding: 60px 20px; }
+  .spinner { width: 34px; height: 34px; border: 3px solid var(--line); border-top-color: var(--accent-hi); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .notice { max-width: 640px; margin: 40px auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .notice h2 { margin-top: 0; }
+  .notice p { color: #e3cdd3; }
+  .warn { background: #2e2410; border: 1px solid #6b5a1a; color: #f5d27a; border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-top: 14px; }
+  .primary { background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 8px 18px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; }
+  .primary:hover { background: var(--accent-hi); }
+  .primary:disabled { opacity: .45; cursor: default; }
+  .hint { font-size: 12px; color: var(--muted); }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 0; max-width: min(820px, calc(100vw - 32px)); width: 100%; }
+  dialog::backdrop { background: rgba(0,0,0,.7); }
+  .detail-hero { position: relative; aspect-ratio: 16/7; background: var(--panel-2) center/cover no-repeat; }
+  .detail-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 30%, var(--panel)); }
+  .detail-close { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,.6); border: 0; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; font-size: 18px; color: #fff; }
+  .detail-body { display: flex; gap: 20px; padding: 0 24px 24px; margin-top: -90px; position: relative; z-index: 1; }
+  .detail-body .poster { flex-basis: 150px; height: 225px; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .detail-body h2 { margin: 50px 0 6px; font-size: 24px; }
+  .detail-body p.overview { color: #eedbe0; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  footer { max-width: 1400px; margin: 0 auto; padding: 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 640px) {
+    .bar { padding: 12px 16px 8px; }
+    nav.cats, main, .provbar { padding-left: 16px; padding-right: 16px; }
+    .controls { margin-left: 0; }
+    input.search { width: 130px; }
+    .grid { grid-template-columns: 1fr; }
+    .tiles { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tile { padding: 12px 34px 12px 12px; gap: 10px; }
+    .tile::after { right: 10px; }
+    .tile .mark { width: 38px; height: 38px; font-size: 13px; }
+    .detail-body { flex-direction: column; margin-top: -60px; padding: 0 16px 20px; }
+    .detail-body h2 { margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">
+      <button class="logo" id="homeBtn" title="Anbieter wählen" aria-label="Anbieter wählen"></button>
+      <div>
+        <h1>Streaming Schweiz</h1>
+        <div class="sub" id="range">Neu in den letzten 7 Tagen</div>
+      </div>
+    </div>
+    <div class="controls" id="controls" hidden>
+      <div class="seg" id="typeSeg">
+        <button data-v="all" class="active">Alle</button>
+        <button data-v="movie">Filme</button>
+        <button data-v="tv">Serien</button>
+      </div>
+      <select class="icon-btn" id="sortSel" title="Sortierung">
+        <option value="date">Neueste zuerst</option>
+        <option value="rating">Beste Bewertung</option>
+        <option value="title">A–Z</option>
+      </select>
+      <input class="search" id="search" type="search" placeholder="Suchen…">
+    </div>
+  </div>
+  <div class="provbar" id="provBar" hidden></div>
+  <nav class="cats" id="catNav"></nav>
+</header>
+
+<main id="content"><div class="status"><div class="spinner"></div>Lade Daten …</div></main>
+
+<footer>
+  Daten &amp; Bilder: <a href="https://www.justwatch.com/ch/neu" target="_blank" rel="noopener">JustWatch</a>
+  (inoffizielle Schnittstelle, täglich aktualisiert). Bewertungen: IMDb, TMDB, Rotten Tomatoes.
+  <span id="stand"></span>
+</footer>
+
+<dialog id="detailDlg"></dialog>
+
+<script>
+"use strict";
+
+/* ---------- Konfiguration ---------- */
+// ANBIETER – Reihenfolge = Reihenfolge in der Auswahl (Anleitung: ANLEITUNG.md)
+//   key:   interner Name – muss mit PACKAGES in update.py übereinstimmen
+//   label: angezeigter Name     short: Text im farbigen Logo-Feld
+//   color: Farbe                url:   Webseite des Anbieters
+const PROVIDERS = [
+  { key: "netflix",    label: "Netflix",            short: "N",     color: "#e50914", url: "https://www.netflix.com/ch-de/" },
+  { key: "prime",      label: "Amazon Prime Video", short: "prime", color: "#00a8e1", url: "https://www.primevideo.com/" },
+  { key: "disney",     label: "Disney+",            short: "D+",    color: "#113ccf", url: "https://www.disneyplus.com/de-ch" },
+  { key: "apple",      label: "Apple TV+",          short: "tv+",   color: "#3a3a3c", url: "https://tv.apple.com/ch" },
+  { key: "paramount",  label: "Paramount+",         short: "P+",    color: "#0064ff", url: "https://www.paramountplus.com/ch/" },
+  { key: "skyshow",    label: "Sky Show",           short: "sky",   color: "#6c3ce0", url: "https://www.sky.ch/de/show" },
+  { key: "mubi",       label: "MUBI",               short: "M",     color: "#24262b", url: "https://mubi.com/de/ch" },
+  { key: "playsuisse", label: "Play Suisse",        short: "PS",    color: "#c8102e", url: "https://www.playsuisse.ch/" },
+];
+
+const DAYS = 7;
+
+// JustWatch-Genre → Kategorie
+const GENRE_MAP = {
+  trl: "Thriller", crm: "Krimi", scf: "Science-Fiction", act: "Action", drm: "Drama", cmy: "Komödie",
+  hrr: "Horror", fnt: "Fantasy", rma: "Romantik", ani: "Animation", fml: "Familie & Kinder",
+  doc: "Dokumentation", rly: "Reality & Talk", hst: "Historie & Krieg", war: "Historie & Krieg",
+  spt: "Sport", msc: "Musik", wsn: "Western",
+};
+// Thriller, Krimi, Sci-Fi zuerst – wie bei „Neu im Stream“
+const CATEGORY_ORDER = [
+  "Thriller", "Krimi", "Science-Fiction",
+  "Action", "Drama", "Komödie", "Horror", "Fantasy", "Abenteuer",
+  "Romantik", "Animation", "Familie & Kinder", "Dokumentation", "Reality & Talk",
+  "Historie & Krieg", "Sport", "Musik", "Western", "Sonstige",
+];
+const PRIORITY_CATS = new Set(["Thriller", "Krimi", "Science-Fiction"]);
+const LS_SELECTED = "sch:selected";
+
+/* ---------- Hilfen ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const provider = k => PROVIDERS.find(p => p.key === k);
+
+function fromDate() { const d = new Date(); d.setDate(d.getDate() - DAYS); return iso(d); }
+function fmtDay(s) {
+  if (!s) return "";
+  const d = new Date(s + "T12:00:00"), today = iso(new Date());
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  if (s === today) return "heute";
+  if (s === iso(y)) return "gestern";
+  return d.toLocaleDateString("de-CH", { weekday: "short", day: "numeric", month: "short" });
+}
+
+/* ---------- Zustand ---------- */
+let DATA = null;
+let items = [];                       // zusammengeführte Titel der gewählten Anbieter
+// gewählte Anbieter (in PROVIDERS-Reihenfolge), werden auf dem Gerät gespeichert
+let selected = (store.get(LS_SELECTED) || []).filter(k => provider(k));
+const view = { type: "all", sort: "date", q: "" };
+
+function rawFor(key) {
+  const from = fromDate();
+  return (DATA?.providers?.[key] || []).filter(it => it.date >= from);
+}
+function saveSelected() {
+  selected = PROVIDERS.map(p => p.key).filter(k => selected.includes(k));
+  store.set(LS_SELECTED, selected);
+}
+
+// Titel aller gewählten Anbieter zusammenführen – läuft ein Titel bei mehreren, gibt es eine Karte
+function buildItems() {
+  const map = new Map();
+  for (const key of selected) {
+    for (const it of rawFor(key)) {
+      const k = cardKey(it);
+      let m = map.get(k);
+      if (!m) { m = { ...it, platforms: [], watchLinks: {} }; map.set(k, m); }
+      if (!m.platforms.includes(key)) m.platforms.push(key);
+      if (it.watch) m.watchLinks[key] = it.watch;
+      if (it.date > m.date) m.date = it.date;
+    }
+  }
+  items = [...map.values()];
+}
+
+/* ---------- Daten laden (data.js, von update.py erzeugt) ---------- */
+function loadData() {
+  return new Promise(resolve => {
+    const s = document.createElement("script");
+    s.src = "data.js?t=" + Date.now();          // immer die neueste Fassung holen
+    s.onload = () => resolve(window.STREAM_DATA || null);
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  });
+}
+
+/* ---------- Kategorie & Bewertung ---------- */
+function category(it) {
+  const cats = [...new Set((it.genres || []).map(g => GENRE_MAP[g]).filter(Boolean))];
+  cats.sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+  return cats[0] || "Sonstige";
+}
+function genreNames(it) { return [...new Set((it.genres || []).map(g => GENRE_MAP[g]).filter(Boolean))]; }
+function label(it) {
+  if (it.type === "movie") return "Film";
+  if (!it.season) return "Serie";
+  if (it.season === 1 && it.year >= new Date().getFullYear() - 1) return "Neue Serie";
+  return `Staffel ${it.season}`;
+}
+function ratingScore(it) { return it.imdb || (it.tmdb || 0); }
+function scoreClass(v) { return v >= 7 ? "g" : v >= 5.5 ? "m" : "b"; }
+function ratingsHtml(it, big = false) {
+  const out = [];
+  if (it.imdb) out.push(`<span class="score imdb" title="IMDb${it.imdbVotes ? ", " + it.imdbVotes.toLocaleString("de-CH") + " Stimmen" : ""}">IMDb ${it.imdb.toFixed(1)}${big && it.imdbVotes ? ` <span style="font-weight:500">· ${it.imdbVotes.toLocaleString("de-CH")}</span>` : ""}</span>`);
+  if (it.tmdb) out.push(`<span class="score ${scoreClass(it.tmdb)}" title="TMDB-Bewertung">★ ${it.tmdb.toFixed(1)}<span style="opacity:.7;font-weight:500"> TMDB</span></span>`);
+  if (it.rt) out.push(`<span class="score rt" title="Rotten Tomatoes">🍅 ${Math.round(it.rt)}%</span>`);
+  if (!out.length) out.push(`<span class="score n" title="Noch zu wenige Stimmen">★ noch keine Bewertung</span>`);
+  return out.join("");
+}
+function platformsHtml(it) {
+  return it.platforms.map(k => { const p = provider(k); return `<span class="plat" style="background:${p.color}">${esc(p.label)}</span>`; }).join("");
+}
+
+/* ---------- Anbieter-Auswahl (Mehrfachauswahl) ---------- */
+let draft = [];   // Auswahl, solange die Übersicht offen ist
+function renderPicker() {
+  draft = selected.length ? [...selected] : [];
+  $("#controls").hidden = true;
+  $("#provBar").hidden = true;
+  $("#catNav").innerHTML = "";
+  setRange();
+  const tile = p => {
+    const n = rawFor(p.key).length;
+    return `<button class="tile ${draft.includes(p.key) ? "on" : ""}" data-p="${p.key}" aria-pressed="${draft.includes(p.key)}">
+      <span class="mark" style="background:${p.color}">${esc(p.short)}</span>
+      <span><b>${esc(p.label)}</b><span class="cnt ${n ? "has" : ""}">${n ? n + " neu" : "nichts Neues"}</span></span></button>`;
+  };
+  $("#content").innerHTML = `<div class="picker">
+    <h2>Anbieter wählen</h2>
+    <p>Wähle einen oder mehrere Anbieter. Gezeigt werden die Filme und Serien, die in den letzten ${DAYS} Tagen in der Schweiz neu aufgeschaltet wurden.</p>
+    <div class="tiles">${PROVIDERS.map(tile).join("")}</div>
+    <div class="pickbar">
+      <button class="icon-btn" data-act="all">Alle wählen</button>
+      <button class="icon-btn" data-act="none">Keine</button>
+      <span class="grow"></span>
+      <button class="primary" data-act="show" id="showBtn"></button>
+    </div>
+    ${staleWarning()}
+  </div>`;
+  updateShowBtn();
+  window.scrollTo({ top: 0 });
+}
+function updateShowBtn() {
+  const b = $("#showBtn"); if (!b) return;
+  b.disabled = !draft.length;
+  b.textContent = draft.length ? `${draft.length} Anbieter anzeigen →` : "Mindestens einen Anbieter wählen";
+}
+function pickerClick(e) {
+  const t = e.target.closest(".tile[data-p]");
+  if (t) {
+    const k = t.dataset.p;
+    draft = draft.includes(k) ? draft.filter(x => x !== k) : [...draft, k];
+    t.classList.toggle("on", draft.includes(k));
+    t.setAttribute("aria-pressed", draft.includes(k));
+    updateShowBtn();
+    return true;
+  }
+  const a = e.target.closest("[data-act]");
+  if (!a) return false;
+  if (a.dataset.act === "all" || a.dataset.act === "none") {
+    draft = a.dataset.act === "all" ? PROVIDERS.map(p => p.key) : [];
+    document.querySelectorAll(".tile[data-p]").forEach(t => { const on = draft.includes(t.dataset.p); t.classList.toggle("on", on); t.setAttribute("aria-pressed", on); });
+    updateShowBtn();
+  } else if (a.dataset.act === "show" && draft.length) {
+    selected = draft; saveSelected(); showList();
+  }
+  return true;
+}
+
+$("#content").addEventListener("click", e => {
+  if (pickerClick(e)) return;
+  const c = e.target.closest(".card");
+  if (c) { const it = items.find(x => cardKey(x) === c.dataset.key); if (it) openDetail(it); }
+});
+
+/* ---------- Gewählte Anbieter in der Kopfzeile: entfernen / hinzufügen ---------- */
+function renderProvBar() {
+  const rest = PROVIDERS.filter(p => !selected.includes(p.key));
+  $("#provBar").hidden = false;
+  $("#provBar").innerHTML =
+    selected.map(k => { const p = provider(k); return `<span class="pchip"><span class="dot" style="background:${p.color}"></span>${esc(p.label)}
+      <button data-rm="${k}" title="${esc(p.label)} entfernen" aria-label="${esc(p.label)} entfernen">✕</button></span>`; }).join("") +
+    (rest.length ? `<button class="addchip" data-add>+ Anbieter</button>` : "");
+}
+$("#provBar").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rm]");
+  if (rm) {
+    selected = selected.filter(k => k !== rm.dataset.rm); saveSelected();
+    selected.length ? showList() : renderPicker();
+    return;
+  }
+  if (e.target.closest("[data-add]")) renderPicker();
+});
+
+/* ---------- Liste ---------- */
+const cardKey = it => `${it.id}|${it.season || ""}`;
+function showList() { buildItems(); window.scrollTo({ top: 0 }); render(); }
+function filtered() {
+  const q = view.q.trim().toLowerCase();
+  return items.filter(it =>
+    (view.type === "all" || it.type === view.type) &&
+    (!q || `${it.title} ${it.original || ""} ${genreNames(it).join(" ")}`.toLowerCase().includes(q)));
+}
+function sorter(a, b) {
+  if (view.sort === "rating") return ratingScore(b) - ratingScore(a) || b.date.localeCompare(a.date);
+  if (view.sort === "title") return a.title.localeCompare(b.title, "de");
+  return b.date.localeCompare(a.date) || ratingScore(b) - ratingScore(a);
+}
+
+function setRange() {
+  const f = new Date(fromDate() + "T12:00:00"), t = new Date();
+  const fmt = d => d.toLocaleDateString("de-CH", { day: "numeric", month: "short" });
+  $("#range").textContent = `Neu vom ${fmt(f)} bis ${fmt(t)} ${t.getFullYear()} · Schweiz`;
+}
+
+function render() {
+  $("#controls").hidden = false;
+  renderProvBar();
+  setRange();
+
+  const list = filtered();
+  const groups = new Map(CATEGORY_ORDER.map(c => [c, []]));
+  for (const it of list) groups.get(category(it)).push(it);
+
+  const nav = [], html = [];
+  for (const [cat, arr] of groups) {
+    if (!arr.length) continue;
+    arr.sort(sorter);
+    const id = "cat-" + cat.replace(/[^a-z]/gi, "");
+    nav.push(`<a class="chip ${PRIORITY_CATS.has(cat) ? "prio" : ""}" href="#${id}" data-cat="${id}">${esc(cat)} <b>${arr.length}</b></a>`);
+    html.push(`<section class="cat" id="${id}"><h2>${esc(cat)} <small>${arr.length} Titel</small></h2><div class="grid">${arr.map(cardHtml).join("")}</div></section>`);
+  }
+  $("#catNav").innerHTML = nav.join("");
+  if (!html.length) {
+    const names = selected.map(k => provider(k).label).join(", ").replace(/, ([^,]*)$/, " und $1");
+    const msg = !items.length ? `Auf ${names} wurde in den letzten ${DAYS} Tagen nichts Neues aufgeschaltet.` : "Keine Titel für diese Auswahl.";
+    $("#content").innerHTML = `<div class="status">${esc(msg)}<br><br><button class="addchip" data-add-picker>+ Weitere Anbieter wählen</button></div>${staleWarning()}`;
+    $("[data-add-picker]")?.addEventListener("click", renderPicker);
+    return;
+  }
+  const nM = list.filter(i => i.type === "movie").length;
+  $("#content").innerHTML = `<p class="hint" style="margin:14px 0 0">${list.length} Titel · ${nM} Filme · ${list.length - nM} Serien</p>${staleWarning()}` + html.join("");
+  spyCategories();
+}
+
+function cardHtml(it) {
+  const lb = label(it);
+  return `<article class="card" data-key="${esc(cardKey(it))}">
+    <div class="poster">${it.poster ? `<img loading="lazy" src="${esc(it.poster)}" alt="${esc(it.title)}">` : ""}</div>
+    <div class="info">
+      <h3>${esc(it.title)}</h3>
+      <div class="meta">
+        ${platformsHtml(it)}
+        <span class="badge ${lb === "Neue Serie" || (it.type === "movie" && it.year >= new Date().getFullYear()) ? "new" : ""}">${esc(lb)}</span>
+        <span>neu ${esc(fmtDay(it.date))}</span>
+        ${it.year ? `<span>· ${esc(it.year)}</span>` : ""}
+      </div>
+      <p class="abstract">${esc(it.overview || "Keine Beschreibung verfügbar.")}</p>
+      <div class="ratings">${ratingsHtml(it)}</div>
+    </div>
+  </article>`;
+}
+
+function openDetail(it) {
+  const dlg = $("#detailDlg");
+  const meta = [
+    label(it), "neu " + fmtDay(it.date), it.year,
+    it.runtime ? it.runtime + " Min." : "",
+  ].filter(Boolean).map(esc).join(" · ");
+  const hero = it.backdrop || it.poster;
+  const watch = it.platforms.filter(k => it.watchLinks[k]).map(k =>
+    `<a class="primary" href="${esc(it.watchLinks[k])}" target="_blank" rel="noopener">▶ Auf ${esc(provider(k).label)} ansehen</a>`).join("");
+  dlg.innerHTML = `
+    <div class="detail-hero" style="${hero ? `background-image:url('${esc(hero)}')` : ""}">
+      <button class="detail-close" aria-label="Schliessen" onclick="this.closest('dialog').close()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="poster">${it.poster ? `<img src="${esc(it.poster)}" alt="">` : ""}</div>
+      <div>
+        <h2>${esc(it.title)}</h2>
+        ${it.original && it.original !== it.title ? `<div class="hint">${esc(it.original)}</div>` : ""}
+        <div class="meta" style="margin:8px 0">${platformsHtml(it)}<span>${meta}</span></div>
+        <div class="meta">${genreNames(it).map(g => `<span class="badge">${esc(g)}</span>`).join("")}</div>
+        <p class="overview">${esc(it.overview || "Keine Beschreibung verfügbar.")}</p>
+        <div class="ratings">${ratingsHtml(it, true)}</div>
+        <div class="links">
+          ${watch}
+          ${it.trailer ? `<a class="icon-btn" href="https://www.youtube.com/watch?v=${esc(it.trailer)}" target="_blank" rel="noopener">🎬 Trailer</a>` : ""}
+          ${it.imdbId ? `<a class="icon-btn" href="https://www.imdb.com/title/${esc(it.imdbId)}/" target="_blank" rel="noopener">IMDb</a>` : ""}
+          ${it.jw ? `<a class="icon-btn" href="${esc(it.jw)}" target="_blank" rel="noopener">JustWatch</a>` : ""}
+        </div>
+      </div>
+    </div>`;
+  dlg.showModal();
+}
+$("#detailDlg").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+/* ---------- Datenstand ---------- */
+function staleWarning() {
+  if (!DATA?.generated) return "";
+  const hrs = (Date.now() - new Date(DATA.generated).getTime()) / 3600e3;
+  if (hrs < 36) return "";
+  return `<div class="warn">Die Daten sind ${Math.round(hrs / 24)} Tage alt – die automatische Aktualisierung scheint nicht zu laufen (siehe ANLEITUNG.md).</div>`;
+}
+function setStand() {
+  if (!DATA?.generated) return;
+  const d = new Date(DATA.generated);
+  $("#stand").textContent = `Stand: ${d.toLocaleDateString("de-CH", { day: "numeric", month: "short" })}, ${d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })} Uhr.`;
+}
+
+/* ---------- Kategorie-Reiter ---------- */
+let spyLockUntil = 0;
+function headerOffset() { return $("header").getBoundingClientRect().height + 8; }
+function setActiveCat(id) {
+  let active = null;
+  document.querySelectorAll("#catNav .chip").forEach(c => { const on = c.dataset.cat === id; c.classList.toggle("active", on); if (on) active = c; });
+  if (active) { const nav = $("#catNav"); nav.scrollTo({ left: Math.max(0, active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2), behavior: "smooth" }); }
+}
+function spyCategories() {
+  if (Date.now() < spyLockUntil) return;
+  const sections = [...document.querySelectorAll("section.cat")];
+  if (!sections.length) return;
+  const limit = headerOffset() + 20;
+  let current = sections[0].id;
+  for (const s of sections) if (s.getBoundingClientRect().top <= limit) current = s.id;
+  setActiveCat(current);
+}
+$("#catNav").addEventListener("click", e => {
+  const a = e.target.closest("a[data-cat]"); if (!a) return;
+  e.preventDefault();
+  const sec = document.getElementById(a.dataset.cat); if (!sec) return;
+  setActiveCat(a.dataset.cat);
+  spyLockUntil = Date.now() + 1000;
+  window.scrollTo({ top: sec.getBoundingClientRect().top + window.scrollY - headerOffset(), behavior: "smooth" });
+});
+let spyRaf = 0;
+window.addEventListener("scroll", () => { if (!spyRaf) spyRaf = requestAnimationFrame(() => { spyRaf = 0; spyCategories(); }); }, { passive: true });
+
+/* ---------- Bedienelemente ---------- */
+$("#homeBtn").onclick = renderPicker;
+$("#typeSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  view.type = b.dataset.v;
+  document.querySelectorAll("#typeSeg button").forEach(x => x.classList.toggle("active", x === b));
+  render();
+});
+$("#sortSel").onchange = e => { view.sort = e.target.value; render(); };
+$("#search").oninput = e => { view.q = e.target.value; render(); };
+
+/* ---------- Start ---------- */
+(async () => {
+  DATA = await loadData();
+  if (!DATA) {
+    $("#content").innerHTML = `<div class="notice"><h2>Keine Daten gefunden</h2>
+      <p>Die Datei <b>data.js</b> fehlt. Sie wird vom Skript <b>update.py</b> erzeugt – auf GitHub automatisch
+      jeden Tag, auf dem Mac mit <code>python3 update.py</code> (siehe ANLEITUNG.md).</p></div>`;
+    return;
+  }
+  setStand();
+  selected.length ? showList() : renderPicker();
+})();
+</script>
+</body>
+</html>
