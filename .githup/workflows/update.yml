@@ -1,0 +1,46 @@
+# Holt automatisch die neuen Titel (update.py), speichert data.js und veröffentlicht die App auf GitHub Pages.
+name: Daten aktualisieren
+
+on:
+  schedule:
+    - cron: "15 4,16 * * *"   # täglich ca. 05:15 und 17:15 Uhr (Schweizer Winterzeit)
+  push:
+    branches: [main]           # nach jedem Hochladen neuer Dateien
+  workflow_dispatch:           # manuell starten: Actions → „Daten aktualisieren“ → Run workflow
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Neue Titel holen
+        run: python3 update.py
+      - name: data.js im Repository speichern
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.js
+          git diff --cached --quiet || git commit -m "Daten aktualisiert"
+          git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: App veröffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v4
